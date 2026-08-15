@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "brand": "Recharge",
+  "currency": "EUR",
+  "generatedAt": "2026-06-10T08:00:00Z",
+  "products": [
+    {
+      "externalId": "RC-WING-X",
+      "name": "Wing-X Foil Wing",
+      "descriptionHtml": "<p>High-aspect freeride wing for fast, efficient riding.</p>",
+      "vendor": "Recharge",
+      "productType": "Wings",
+      "status": "active",
+      "tags": ["2026", "freeride"],
+      "categoryPaths": ["Wings / Freeride"],
+      "images": [
+        { "src": "https://recharge.si/img/wingx/hero.jpg", "alt": "Wing-X" }
+      ],
+      "variants": [
+        {
+          "sku": "RC-WX-40",
+          "barcode": "3830001234567",
+          "option1": "4.0",
+          "stock": 7,
+          "price": { "amount": 899.0, "vat": 22, "taxMode": "gross" },
+          "image": "https://recharge.si/img/wingx/40.jpg"
+        },
+        {
+          "sku": "RC-WX-50",
+          "barcode": "3830001234574",
+          "option1": "5.0",
+          "stock": 3,
+          "price": { "amount": 949.0, "vat": 22, "taxMode": "gross" }
+        }
+      ]
+    }
+  ]
+}

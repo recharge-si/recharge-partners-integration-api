@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/* Fonts are wired in layout.tsx via next/font (sets --font-orbitron / --font-montserrat). */
+:root {
+  --font-orbitron: "Orbitron", ui-sans-serif, system-ui, sans-serif;
+  --font-montserrat: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    background: #000;
+    color: rgb(212 212 212); /* neutral-300 */
+    font-family: var(--font-montserrat);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    color: rgb(245 245 245); /* neutral-100 */
+  }
+}
+
+.font-orbitron {
+  font-family: var(--font-orbitron);
+}
+.font-montserrat {
+  font-family: var(--font-montserrat);
+}
+
+/* ---- Motion (kept short & purposeful) ---- */
+@keyframes blob {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -40px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-blob {
+  animation: blob 28s ease-in-out infinite;
+}
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+.animation-delay-6000 {
+  animation-delay: 6s;
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out both;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(64 64 64); /* neutral-700 */
+  border-radius: 9999px;
+}

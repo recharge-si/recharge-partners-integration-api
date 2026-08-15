@@ -1,0 +1,21 @@
+# Deploy: the portal as a single container.
+#   1. Build & push the image:  scripts\build-and-push.cmd --latest   (or .sh)
+#   2. Run it:                  docker compose up -d
+#
+# Image: time4action/recharge-partners-integration-api (built via scripts/).
+# Configuration is loaded from the .env file next to this compose file (same file
+# used for local dev). MongoDB is external (see MONGO_URI in .env), so there is no
+# bundled database service.
+#
+# Exposed on host port 4545 (container listens on 3000).
+services:
+  app:
+    image: time4action/recharge-partners-integration-api:latest
+    # Built & pushed via scripts/ (scripts\build-and-push.cmd or scripts/build-and-push.sh).
+    # Uncomment to build locally instead of pulling the pushed image:
+    # build: .
+    env_file:
+      - .env
+    ports:
+      - "4545:3000"
+    restart: unless-stopped
