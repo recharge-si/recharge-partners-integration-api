@@ -1,8 +1,9 @@
 # Deploy: the portal as a single container.
-#   1. Build & push the image:  scripts\build-and-push.cmd --latest   (or .sh)
-#   2. Run it:                  docker compose up -d
+#   Merging to main deploys it (.github/workflows/deploy.yml): CI builds the image,
+#   pushes it to GHCR and sets APP_IMAGE to it on the server.
+#   By hand: docker compose up -d   (runs APP_IMAGE, or :latest when unset)
 #
-# Image: time4action/recharge-partners-integration-api (built via scripts/).
+# Image: ghcr.io/recharge-si/recharge-partners-integration-api.
 # Configuration is loaded from the .env file next to this compose file (same file
 # used for local dev). MongoDB is external (see MONGO_URI in .env), so there is no
 # bundled database service.
@@ -10,8 +11,7 @@
 # Exposed on host port 4545 (container listens on 3000).
 services:
   app:
-    image: time4action/recharge-partners-integration-api:latest
-    # Built & pushed via scripts/ (scripts\build-and-push.cmd or scripts/build-and-push.sh).
+    image: ${APP_IMAGE:-ghcr.io/recharge-si/recharge-partners-integration-api:latest}
     # Uncomment to build locally instead of pulling the pushed image:
     # build: .
     env_file:

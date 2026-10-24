@@ -40,7 +40,7 @@ that returns 0 products.
 | Database       | **MongoDB** via **Mongoose** — run history only      |
 | Validation     | **Zod** (feed contract + env)                        |
 | Scheduling     | **In-process `node-cron`**, booted from `instrumentation.ts` |
-| Deploy         | **Docker** → image `time4action/recharge-partners-integration-api` (built via `scripts/build-and-push`), run via `docker-compose.yml` on port **4545** |
+| Deploy         | **Docker** → image `ghcr.io/recharge-si/recharge-partners-integration-api`, built and deployed by CI on merge to `main` (`.github/workflows/deploy.yml`), run via `docker-compose.yml` on port **4545** |
 
 > ⚠️ This is **Next.js 16** — APIs differ from older training data. Route handler
 > `params` are **async** (`await params`); startup hooks go in `instrumentation.ts`.
@@ -99,6 +99,7 @@ src/
       export/[id]/route.ts    GET — serve the STORED snapshot feed (instant; 404 if never pulled).
       sources/[id]/pull/route.ts  POST — pull one source (build + validate + store + run).
       pull-all/route.ts       POST — pull every non-disabled source.
+      healthz/route.ts        GET — liveness probe for the CI deploy (no DB).
       cron/run/route.ts       POST — run all scheduled sources (CRON_SECRET-protected).
   lib/
     sources/registry.ts       SOURCES (code-defined) + getSource/exportPath.

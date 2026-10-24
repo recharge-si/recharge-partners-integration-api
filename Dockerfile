@@ -23,6 +23,9 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+# The commit the image was built from; the CI deploy checks it after a rollout.
+ARG GIT_SHA=dev
+ENV APP_VERSION=$GIT_SHA
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
