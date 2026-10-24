@@ -133,7 +133,6 @@ export default async function SourceDetailPage({
                     <td className="px-4 py-3">
                       <StatusBadge tone={r.status === "success" ? "cyan" : r.status === "running" ? "amber" : "red"}>
                         {r.status}
-                        {r.dryRun ? " · dry" : ""}
                       </StatusBadge>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-neutral-400">{r.counts.products}</td>
@@ -157,7 +156,6 @@ export default async function SourceDetailPage({
                     <span className="font-mono text-xs text-neutral-300">{fmt(r.startedAt)}</span>
                     <StatusBadge tone={r.status === "success" ? "cyan" : r.status === "running" ? "amber" : "red"}>
                       {r.status}
-                      {r.dryRun ? " · dry" : ""}
                     </StatusBadge>
                   </div>
                   <p className="mt-2 text-xs text-neutral-400">

@@ -3,7 +3,7 @@
  * way the app writes them — via the `@/…` alias (tsconfig `paths`) and without
  * file extensions — with no bundler or ts-node involved.
  *
- * Usage: node --experimental-strip-types --import ./scripts/alias-loader.mjs script.ts
+ * Usage: node --import ./scripts/alias-loader.mjs script.ts
  */
 import { register } from "node:module";
 import { pathToFileURL } from "node:url";

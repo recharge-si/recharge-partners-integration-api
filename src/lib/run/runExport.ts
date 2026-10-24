@@ -4,28 +4,28 @@ import { ExportSnapshot } from "@/lib/models/ExportSnapshot";
 import { getSource, type PartnerSource } from "@/lib/sources/registry";
 import { buildStandardFeed } from "@/lib/sources/builders";
 import { validateFeed, type ValidationIssue } from "@/lib/feed/validate";
-import { planDryRun, syncFeedToShopify } from "@/lib/shopify/sync";
-import { isShopifyConfigured } from "@/env";
 import type { Feed } from "@/lib/feed/schema";
 
 export type Trigger = "manual" | "scheduled" | "test";
 
 export type ExportResult = {
   status: "success" | "failed";
-  dryRun: boolean;
-  counts: { products: number; variants: number; created: number; updated: number; removed: number };
+  counts: { products: number; variants: number };
   issues: ValidationIssue[];
   error: string | null;
   feedGeneratedAt: Date | null;
 };
 
-const ZERO = { products: 0, variants: 0, created: 0, updated: 0, removed: 0 };
+const ZERO = { products: 0, variants: 0 };
 
 /**
  * Pull a source: build its standardized feed (bespoke code mapping), validate it
  * against our own contract, then STORE it (ExportSnapshot) so the export endpoint
- * serves it instantly. Also pushes to Shopify (or dry-run) and records an
- * ImportRun. `trigger === "test"` validates only — no store, no history.
+ * serves it instantly, and records an ImportRun. `trigger === "test"` validates
+ * only — no store, no history.
+ *
+ * This app never writes to Shopify. The export portal (t4a-partner-portal-api)
+ * registers `/api/export/<id>` as an Own Source and does the Shopify push.
  *
  * Strict by design: a build error or validation failure aborts before any store
  * or write, so a broken mapping can never replace a good stored export.
@@ -36,7 +36,6 @@ export async function runExport(sourceId: string, trigger: Trigger): Promise<Exp
 
   const startedAt = new Date();
   const isTest = trigger === "test";
-  const dryRun = !isShopifyConfigured();
 
   // Mark the run as "running" up front so a reload (or another viewer) sees the
   // in-progress state even though the pull takes ~45s. Tests are not recorded.
@@ -47,7 +46,6 @@ export async function runExport(sourceId: string, trigger: Trigger): Promise<Exp
       sourceId,
       trigger,
       status: "running",
-      dryRun,
       startedAt,
       counts: { ...ZERO },
       issues: [],
@@ -56,7 +54,7 @@ export async function runExport(sourceId: string, trigger: Trigger): Promise<Exp
     runId = run._id;
   }
 
-  const { result, feed } = await execute(source, isTest, dryRun);
+  const { result, feed } = await execute(source);
 
   if (!isTest) {
     // Store the latest good feed so /api/export/<id> is instant.
@@ -78,7 +76,6 @@ export async function runExport(sourceId: string, trigger: Trigger): Promise<Exp
     // Finalise the run record.
     await ImportRun.findByIdAndUpdate(runId, {
       status: result.status,
-      dryRun: result.dryRun,
       finishedAt: new Date(),
       feedGeneratedAt: result.feedGeneratedAt,
       counts: result.counts,
@@ -92,11 +89,9 @@ export async function runExport(sourceId: string, trigger: Trigger): Promise<Exp
 
 async function execute(
   source: PartnerSource,
-  isTest: boolean,
-  dryRun: boolean,
 ): Promise<{ result: ExportResult; feed: Feed | null }> {
   const fail = (error: string, extra: Partial<ExportResult> = {}): { result: ExportResult; feed: null } => ({
-    result: { status: "failed", dryRun, counts: { ...ZERO }, issues: [], error, feedGeneratedAt: null, ...extra },
+    result: { status: "failed", counts: { ...ZERO }, issues: [], error, feedGeneratedAt: null, ...extra },
     feed: null,
   });
 
@@ -119,41 +114,22 @@ async function execute(
 
   const feed = validation.data;
   const feedGeneratedAt = new Date(feed.generatedAt);
-  const baseCounts = {
+  const counts = {
     products: validation.stats.products,
     variants: validation.stats.variants,
-    created: 0,
-    updated: 0,
-    removed: 0,
   };
 
   // 3. Wipe-guard: never let an empty build replace a good export.
   if (feed.products.length === 0) {
     return {
-      result: { status: "failed", dryRun, counts: baseCounts, issues: [], error: "Built feed returned 0 products (wipe-guard).", feedGeneratedAt },
+      result: { status: "failed", counts, issues: [], error: "Built feed returned 0 products (wipe-guard).", feedGeneratedAt },
       feed: null,
     };
   }
 
-  // 4. Test stops here — validated, nothing stored/written.
-  if (isTest) {
-    return {
-      result: { status: "success", dryRun, counts: baseCounts, issues: [], error: null, feedGeneratedAt },
-      feed,
-    };
-  }
-
-  // 5. Push to Shopify (or plan a dry-run). Feed is returned either way so it can be stored.
-  try {
-    const counts = dryRun ? planDryRun(feed) : await syncFeedToShopify(source, feed);
-    return {
-      result: { status: "success", dryRun, counts: { ...baseCounts, ...counts }, issues: [], error: null, feedGeneratedAt },
-      feed,
-    };
-  } catch (err) {
-    return {
-      result: { status: "failed", dryRun, counts: baseCounts, issues: [], error: (err as Error).message, feedGeneratedAt },
-      feed: null,
-    };
-  }
+  // 4. Valid. A test run stops here (the caller stores nothing for it).
+  return {
+    result: { status: "success", counts, issues: [], error: null, feedGeneratedAt },
+    feed,
+  };
 }

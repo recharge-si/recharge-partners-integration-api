@@ -1,4 +1,11 @@
-# Guide for Coherent Design — Patrik Partner Portal
+# Guide for Coherent Design
+
+> **Where this comes from.** This guide was written for the export portal UI
+> (`t4a-partner-portal-ui`), and this app follows the same look on purpose. File
+> references below such as `src/app/page.js`, `ShopifyIntegrationPage.js` and
+> `integrations/shopify/` are in **that** repo. In this repo the reference screens are
+> `src/app/page.tsx` (dashboard) and `src/app/sources/[id]/page.tsx` (detail), and the
+> shared primitives are `src/components/ui/StatusBadge.tsx` and `PingDot.tsx`.
 
 A practical reference for keeping the portal's UI **visually and behaviourally coherent**. It documents the conventions already established across `src/app` and `src/components` so that any new page, panel, or component looks and feels like it has always belonged.
 

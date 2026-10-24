@@ -16,7 +16,6 @@ const RUNNING_TTL_MS = 5 * 60 * 1000;
 export type LastRun = {
   status: "running" | "success" | "failed";
   at: string;
-  dryRun: boolean;
   products: number;
   variants: number;
 };
@@ -45,11 +44,10 @@ export type ImportRunDTO = {
   id: string;
   trigger: "manual" | "scheduled" | "test";
   status: "running" | "success" | "failed";
-  dryRun: boolean;
   startedAt: string;
   finishedAt: string | null;
   feedGeneratedAt: string | null;
-  counts: { products: number; variants: number; created: number; updated: number; removed: number };
+  counts: { products: number; variants: number };
   issues: { path: string; message: string }[];
   error: string | null;
 };
@@ -60,7 +58,6 @@ function toLastRun(doc: any | null): LastRun | null {
   return {
     status: doc.status,
     at: new Date(doc.startedAt).toISOString(),
-    dryRun: Boolean(doc.dryRun),
     products: doc.counts?.products ?? 0,
     variants: doc.counts?.variants ?? 0,
   };
@@ -71,16 +68,12 @@ function toRunDTO(doc: any): ImportRunDTO {
     id: String(doc._id),
     trigger: doc.trigger,
     status: doc.status,
-    dryRun: Boolean(doc.dryRun),
     startedAt: new Date(doc.startedAt).toISOString(),
     finishedAt: doc.finishedAt ? new Date(doc.finishedAt).toISOString() : null,
     feedGeneratedAt: doc.feedGeneratedAt ? new Date(doc.feedGeneratedAt).toISOString() : null,
     counts: {
       products: doc.counts?.products ?? 0,
       variants: doc.counts?.variants ?? 0,
-      created: doc.counts?.created ?? 0,
-      updated: doc.counts?.updated ?? 0,
-      removed: doc.counts?.removed ?? 0,
     },
     issues: (doc.issues ?? []).map((i: any) => ({ path: i.path, message: i.message })),
     error: doc.error ?? null,

@@ -12,19 +12,20 @@ Open decisions worth revisiting with the owner:
   - [ ] 9 rows have no price at all and are skipped — confirm that's acceptable.
   - [ ] POINT-7's endpoint is slow (~45s); consider caching the export response.
 
-- [ ] **Patrik** and any further partners — add a registry entry + builder each.
+✅ **Unifiber** — done & live (`sources/unifiber.ts` + `unifiber-map.ts`).
 
-## 2. Shopify sync — `src/lib/shopify/sync.ts`
+- [ ] Further partners — add a registry entry + builder each. (Patrik is not one:
+      its catalogue reaches the export portal through the PNV sync.)
 
-`syncFeedToShopify` is a stub that throws; runs are dry-runs.
+## 2. Hand-off to the export portal
 
-- [ ] **SKU matching** against existing Shopify variants (bulk query).
-- [ ] **Create** absent products/variants; **update** price/inventory/fields on matches.
-- [ ] **Status** from `product.status` (fallback decided per source).
-- [ ] **Removal**: track which Shopify products came from which source (tag/metafield
-      `recharge-source:<id>`) and delist / zero-stock / keep when they drop out.
-- [ ] Return accurate `{ created, updated, removed }`; batch + respect rate limits.
-- [ ] Use the `shopify-admin` skill / bundled docs for current GraphQL shapes.
+This app publishes; the export portal pushes to Shopify. Removed here: the
+`syncFeedToShopify` stub, the Admin client, `SHOPIFY_*` and `ENCRYPTION_KEY`.
+
+- [ ] Register each `/api/export/<id>` as an Own Source in the export portal
+      (Integrations → Own Sources) for the store that sells the brand.
+- [ ] The portal can only reach this app if `/api/export/*` is reachable from it;
+      keep the rest private (see 3).
 
 ## 3. Authentication / access control
 
@@ -38,16 +39,13 @@ Open decisions worth revisiting with the owner:
 ## 5. Observability & ops
 
 - [ ] Notifications (email/webhook) on failed runs.
-- [ ] Capture per-product Shopify errors into `ImportRun.issues`.
 - [ ] Prune old `ImportRun` history (TTL index).
 
 ## 6. Tests
 
-- [ ] Unit tests for `validateFeed` (happy path + every failure → exact path).
-- [ ] Pipeline tests for `runExport` with a mocked builder + mocked Shopify.
+✅ `npm test`: `validateFeed`, POINT-7 and Unifiber mapping against recorded exports.
+- [ ] Pipeline tests for `runExport` with a mocked builder and an in-memory Mongo.
 
 ## Known shortcuts / tech debt
 
-- `planDryRun` reports every product as "created" (no real diff). Fine for dry-run.
-- `src/lib/crypto.ts` is currently unused (kept for future native-feed secrets).
 - `npm run start` warns under `output: standalone`; use `node .next/standalone/server.js`.
