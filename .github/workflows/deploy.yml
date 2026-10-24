@@ -32,6 +32,9 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm test
+      # Our copy of the feed contract must match the one the export portal serves.
+      - run: npm run check:schema
       - run: npm run build
 
   deploy:

@@ -23,7 +23,7 @@ const CURRENCY = "EUR";
 
 /**
  * ⚠️ POINT-7 only reports "available" vs "not", never a quantity. We represent
- * availability as this many units. Tune, or let the Shopify sync set a policy.
+ * availability as this many units. Tune with the product owner (docs/ROADMAP.md).
  */
 const STOCK_WHEN_AVAILABLE = 10;
 

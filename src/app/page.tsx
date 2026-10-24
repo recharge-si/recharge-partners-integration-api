@@ -42,7 +42,7 @@ export default async function DashboardPage() {
               </span>
             </div>
             <p className="mt-1 hidden text-xs text-neutral-500 sm:block">
-              Standardized exports mapped from each partner&rsquo;s feed, synced one-way to Shopify.
+              Standardized exports mapped from each partner&rsquo;s feed, published for the export portal.
             </p>
           </div>
         </div>

@@ -5,8 +5,14 @@ The portal **validates** against it and **never guesses or coerces**. One invali
 field rejects the whole import; validation errors are reported with the exact path
 (e.g. `products[0].variants[1].sku`) so you can forward them straight to the supplier.
 
-The authoritative machine-readable definition is `src/lib/feed/schema.ts` (Zod).
-Keep this doc and that schema in sync.
+The authoritative machine-readable definition is the export portal's JSON Schema,
+served at `https://api.time-4-action.com/api/export/schemas/own-source.v1.json`
+(source: `t4a-partner-portal-api/src/services/external/schema/own-source.v1.json`).
+`src/lib/feed/own-source.v1.json` is a verbatim copy that `validateFeed` uses;
+`npm run check:schema` (also in CI) fails when the two differ.
+`src/lib/feed/schema.ts` (Zod) mirrors it for types and adds cross-row rules
+(unique `externalId` and `sku`). Change the portal's schema first, then the copy,
+the Zod schema and this page.
 
 ## Example
 

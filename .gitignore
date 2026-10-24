@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local partner exports (emailed CSVs etc.); never commit
+/files_mine/

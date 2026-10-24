@@ -8,19 +8,20 @@
 ## What this is
 
 A self-hosted **portal that publishes standardized product exports for partner
-sources, and syncs them one-way into a Shopify store**.
+sources**. It never writes to Shopify: the export portal (`t4a-partner-portal-api`)
+pulls each export as an **Own Source** and does the Shopify push.
 
 Each partner exports its catalogue in its own shape (x/y/z). The **mapping from
 that native shape into OUR standard feed format is bespoke code, per partner**.
 The portal then:
 
 1. Runs each partner's code mapping to build a feed in our standard format,
-2. **Strictly validates** the built feed against the standard (Zod),
+2. **Strictly validates** the built feed against the portal's JSON Schema, then Zod,
 3. **Serves it** as a standardized export at `GET /api/export/<id>` (the links the UI lists),
-4. On a schedule, pushes it one-way into Shopify (matched by SKU), alongside "Patrik".
+4. On a schedule, rebuilds it. The portal reads that URL and pushes to Shopify.
 
 **Strict by design:** a build error or one invalid field aborts before any write —
-a broken mapping can never half-update the catalogue. A wipe-guard refuses a build
+a broken mapping can never replace a good stored export. A wipe-guard refuses a build
 that returns 0 products.
 
 ### Two things that are deliberately NOT here
@@ -38,7 +39,7 @@ that returns 0 products.
 | Styling        | **Tailwind CSS v4** — dark theme, cyan `#01a0be` accent (see `guide_for_coherent_design.md`) |
 | Fonts          | **Orbitron** (display/wordmark) + **Montserrat** (body) via `next/font` |
 | Database       | **MongoDB** via **Mongoose** — run history only      |
-| Validation     | **Zod** (feed contract + env)                        |
+| Validation     | **Ajv** against the portal's JSON Schema (canonical) + **Zod** (types, unique SKUs, env) |
 | Scheduling     | **In-process `node-cron`**, booted from `instrumentation.ts` |
 | Deploy         | **Docker** → image `ghcr.io/recharge-si/recharge-partners-integration-api`, built and deployed by CI on merge to `main` (`.github/workflows/deploy.yml`), run via `docker-compose.yml` on port **4545** |
 
@@ -47,9 +48,8 @@ that returns 0 products.
 
 ## Env var names (note the non-default names)
 
-`MONGO_URI`, `MONGO_DB_NAME`, `ENCRYPTION_KEY`, `CRON_ENABLED`, `CRON_EXPRESSION`,
-`CRON_TIMEZONE`, `CRON_SECRET`, `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_ADMIN_ACCESS_TOKEN`,
-`SHOPIFY_API_VERSION`. The real `.env` is git-ignored and already populated.
+`MONGO_URI`, `MONGO_DB_NAME`, `CRON_ENABLED`, `CRON_EXPRESSION`, `CRON_TIMEZONE`,
+`CRON_SECRET`, `POINT7_FEED_URL`, `UNIFIBER_STOCK_URL`. The real `.env` is git-ignored and already populated.
 Always read via `getEnv()` from `@/env`; never touch `process.env` directly
 (except `NEXT_RUNTIME` in `instrumentation.ts`).
 
@@ -59,11 +59,10 @@ Always read via `getEnv()` from `@/env`; never touch `process.env` directly
 
 ```
 buildStandardFeed(id)        ← bespoke per-partner mapping (src/lib/sources/builders.ts)
-  → validateFeed (Zod, strict, issues with exact paths — we validate our OWN output)
+  → validateFeed (portal JSON Schema, then Zod; issues with exact paths — we validate our OWN output)
     → wipe-guard (refuse 0 products)
-      → [test trigger stops here — validated, nothing written]
-        → syncFeedToShopify  (or planDryRun if Shopify not configured)
-          → persist ImportRun (keyed by the string source id)
+      → [test trigger stops here — validated, nothing stored]
+        → store ExportSnapshot + persist ImportRun (keyed by the string source id)
 ```
 
 A **pull** (build+validate) is slow because it fetches the partner's live feed
@@ -73,17 +72,20 @@ never builds on the fly. Trigger pulls via `POST /api/sources/[id]/pull` (one),
 `POST /api/pull-all` (all), or the cron. Triggers for recorded runs: `manual`,
 `scheduled`, `test` (test validates only — no store, no history).
 
-**Dry-run mode:** without `SHOPIFY_*` env vars, runs validate + record history but
-don't write to Shopify (`planDryRun`).
+**The feed contract** is the export portal's JSON Schema. `src/lib/feed/own-source.v1.json`
+is a verbatim copy; `npm run check:schema` (in CI) compares it with the one the portal
+serves. Change the portal's schema first, then copy it here and mirror it in `schema.ts`.
 
 ## Onboarding a real partner source
 
 1. Add an entry to `SOURCES` in `src/lib/sources/registry.ts` (id, brand, etc.).
 2. Add a builder for that id in `src/lib/sources/builders.ts` — fetch the partner's
-   native feed and map it to a `Feed` (must satisfy `src/lib/feed/schema.ts`).
+   native feed and map it to a `Feed` (must satisfy the feed contract above).
    That's the "complex mapping". Validation will catch any mismatch.
-3. Done — it appears in the UI, gets an `/api/export/<id>` link, and (if
-   `scheduleEnabled`) is pulled by cron.
+3. Add a test in `test/` against a recorded export (see `test/point7.test.ts`).
+4. It appears in the UI, gets an `/api/export/<id>` link, and (if
+   `scheduleEnabled`) is pulled by cron. Register that link as an Own Source in
+   the export portal so it reaches Shopify.
 
 ## Project map
 
@@ -105,22 +107,22 @@ src/
     sources/registry.ts       SOURCES (code-defined) + getSource/exportPath.
     sources/builders.ts       Per-partner mapping fns (BUILDERS) → standard Feed.
     sources/point7.ts         POINT-7 builder: fetch live feed (POINT7_FEED_URL) + map.
-    sources/point7-map.ts     POINT-7 pure mapping (group by id, synthetic OWN skus). Tested by scripts/test-point7.ts.
-    run/runExport.ts          Pipeline orchestrator (build → validate → sync/dry-run → history).
-    feed/schema.ts            THE feed contract (Zod). Source of truth.
+    sources/point7-map.ts     POINT-7 pure mapping (group by id, synthetic OWN skus). Tested by test/point7.test.ts.
+    sources/unifiber*.ts      Unifiber builder + pure mapping (stock CSV + data/unifiber-master.csv).
+    run/runExport.ts          Pipeline orchestrator (build → validate → store → history).
+    feed/own-source.v1.json   Copy of the portal's JSON Schema — the canonical contract.
+    feed/schema.ts            Zod mirror of it (types, unique externalId/sku).
     feed/validate.ts          validateFeed → issues with exact paths.
-    shopify/client.ts         Admin GraphQL client (works once env set).
-    shopify/sync.ts           syncFeedToShopify — ⚠️ NOT IMPLEMENTED (dry-run until then).
     cron/scheduler.ts         startScheduler / runAllScheduled (iterates registry).
     db/mongoose.ts            Cached Mongoose connection.
     models/ImportRun.ts       Run history (sourceId = string code id).
     models/ExportSnapshot.ts  Latest stored standardized feed per source (served by /api/export).
     data.ts                   Read helpers: registry + latest run → DTOs for RSC.
-    crypto.ts                 AES-256-GCM helpers (currently unused; for future native-feed secrets).
   components/
     SourceStatus.tsx          Dot + badge status presenter.
     ui/StatusBadge.tsx, ui/PingDot.tsx   Shared primitives from the design guide.
 docs/                         FEED-FORMAT.md (supplier contract), ARCHITECTURE.md, ROADMAP.md, examples/.
+test/                         node:test unit tests + fixtures (recorded partner exports).
 public/recharge-logo.png      Brand logo (shown in nav).
 guide_for_coherent_design.md  THE design system reference — follow it for any UI work.
 ```
@@ -129,17 +131,17 @@ guide_for_coherent_design.md  THE design system reference — follow it for any 
 
 ✅ Done: scaffold, dark design system per the guide, code source registry +
 builders, standardized export endpoint, read-only dashboard + detail + history,
-run pipeline (build → validate → dry-run), cron scheduler, MongoDB run history,
-Docker. MongoDB connection verified working.
+run pipeline (build → validate → store), cron scheduler, MongoDB run history,
+Docker, unit tests.
 
 ✅ **POINT-7** — first real source, live. Maps the WP store export → standard feed
 (group by `id`, synthetic `OWN<hash>` skus for SKU-less rows, gross price @ 22% VAT,
 inventory as availability). Verified end-to-end: 74 products / 354 variants.
 
+✅ **Unifiber** — live (Equipe Trading stock CSV + master export).
+
 🚧 Remaining:
-- **More partner builders** — `patrik` is a placeholder (export → 501).
-- **`src/lib/shopify/sync.ts`** — actual SKU-matched create/update/remove. Until
-  then runs are dry-runs. See `docs/ROADMAP.md`.
+- **Register the exports as Own Sources** in the export portal. See `docs/ROADMAP.md`.
 - **POINT-7 open decisions** (see `point7-map.ts`): `STOCK_WHEN_AVAILABLE` (feed only
   gives 0/1 availability), and 9 price-less rows are skipped.
 
@@ -158,7 +160,9 @@ inventory as availability). Verified end-to-end: 74 products / 354 variants.
 npm run dev      # local dev (reads .env)
 npm run build    # production build (Turbopack)
 npm run lint     # eslint
-npx tsc --noEmit # typecheck
+npm run typecheck
+npm test         # unit tests (offline)
+npm run check:schema   # our feed schema copy vs the portal's
 ```
 
 > `npm run start` warns under `output: standalone`; for a prod-like run use

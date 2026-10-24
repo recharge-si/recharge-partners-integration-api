@@ -2,19 +2,25 @@
   "name": "recharge-partners-integration-api",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:point7": "node --experimental-strip-types scripts/test-point7.ts",
-    "test:unifiber": "node --experimental-strip-types --import ./scripts/alias-loader.mjs scripts/test-unifiber.ts",
+    "test": "node --import ./scripts/alias-loader.mjs --test test/*.test.ts",
+    "check:schema": "node scripts/check-schema.mjs",
+    "test:unifiber": "node --import ./scripts/alias-loader.mjs scripts/test-unifiber.ts",
     "docker:build": "scripts/build-and-push.sh --latest",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
   },
   "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "mongoose": "^9.7.0",
     "next": "16.2.9",
     "node-cron": "^4.2.1",

@@ -6,7 +6,6 @@ import { PullIcon, Spinner } from "@/components/ui/icons";
 
 type Result = {
   status: "success" | "failed";
-  dryRun: boolean;
   counts: { products: number; variants: number };
   error: string | null;
 };
@@ -40,7 +39,7 @@ export function PullButton({
       if (!res.ok || data.status === "failed") {
         setMsg({ ok: false, text: data.error || "Pull failed" });
       } else {
-        setMsg({ ok: true, text: `${data.counts.products}p · ${data.counts.variants}v${data.dryRun ? " · dry" : ""}` });
+        setMsg({ ok: true, text: `${data.counts.products}p · ${data.counts.variants}v` });
       }
     } catch (err) {
       setMsg({ ok: false, text: (err as Error).message });

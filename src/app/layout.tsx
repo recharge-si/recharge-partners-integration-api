@@ -17,7 +17,7 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: "Recharge sources",
-  description: "Standardized partner export sources, synced one-way to Shopify.",
+  description: "Standardized partner export sources, published for the export portal.",
 };
 
 export default function RootLayout({
