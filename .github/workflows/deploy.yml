@@ -34,11 +34,24 @@ jobs:
       - run: npm run lint
       - run: npm test
       # Our copy of the feed contract must match the one the export portal serves.
+      # It fails (never skips) when the portal cannot be reached or answers 404.
       - run: npm run check:schema
       - run: npm run build
 
-  deploy:
+  # A skipped, cancelled or failed `check` must never read as green: this job runs
+  # always() and fails unless `check` succeeded. Make it the required status check.
+  gate:
     needs: check
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - run: |
+          echo "check result: ${{ needs.check.result }}"
+          test "${{ needs.check.result }}" = "success"
+
+  deploy:
+    needs: [check, gate]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment: production
