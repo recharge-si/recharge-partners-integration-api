@@ -62,7 +62,7 @@ function parsePrice(raw: string | undefined): number | null {
 function validUrl(raw: string | undefined): string | undefined {
   const s = raw?.trim();
   if (!s) return undefined;
-  return /^https?:\/\//i.test(s) ? s : undefined;
+  return /^https:\/\//i.test(s) ? s : undefined; // https only: the feed contract refuses http images
 }
 
 /** Stable synthetic SKU for rows the supplier left without one. */
