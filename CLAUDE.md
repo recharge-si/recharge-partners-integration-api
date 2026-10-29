@@ -49,7 +49,13 @@ that returns 0 products.
 ## Env var names (note the non-default names)
 
 `MONGO_URI`, `MONGO_DB_NAME`, `CRON_ENABLED`, `CRON_EXPRESSION`, `CRON_TIMEZONE`,
-`CRON_SECRET`, `POINT7_FEED_URL`, `UNIFIBER_STOCK_URL`. The real `.env` is git-ignored and already populated.
+`CRON_SECRET`, `POINT7_FEED_URL`, `UNIFIBER_STOCK_URL` (plus `NODE_ENV`). `.env.example` lists them all
+(`test/env-example.test.ts` fails if `src/env.ts` gains a variable that is not in it). The real `.env` is git-ignored.
+
+Read only by `scripts/check-schema.mjs` (not by the app): `PORTAL_SCHEMA_URL` is the portal schema to compare
+with (default `https://api.time-4-action.com/api/export/schemas/own-source.v1.json`; the script prints which
+one it uses), `PORTAL_SCHEMA_TIMEOUT_MS` is the request timeout (default 20000).
+
 Always read via `getEnv()` from `@/env`; never touch `process.env` directly
 (except `NEXT_RUNTIME` in `instrumentation.ts`).
 
@@ -75,6 +81,14 @@ never builds on the fly. Trigger pulls via `POST /api/sources/[id]/pull` (one),
 **The feed contract** is the export portal's JSON Schema. `src/lib/feed/own-source.v1.json`
 is a verbatim copy; `npm run check:schema` (in CI) compares it with the one the portal
 serves. Change the portal's schema first, then copy it here and mirror it in `schema.ts`.
+`check:schema` exits 0 only when the two are identical; a 404, other non-2xx, timeout, network error or non-JSON
+body exits 1, and a difference names the first differing path. In CI the `gate` job (`if: always()`) fails
+unless `check` succeeded, so the comparison cannot be skipped silently. It therefore fails until the portal
+that serves the schema is deployed.
+
+**Image URLs must be https** (the portal's validator refuses anything else; the scheme is case-insensitive, so
+`HTTPS://` passes). The rule is a Zod refine in `schema.ts`, not an edit of the vendored JSON. Builders drop
+non-https images rather than abort the feed.
 
 ## Onboarding a real partner source
 

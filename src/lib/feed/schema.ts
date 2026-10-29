@@ -16,9 +16,19 @@ export const PriceSchema = z
   })
   .strict();
 
+/**
+ * Shopify can only fetch https images, and the export portal refuses anything
+ * else (feedValidator.service.js tests /^https:\/\//i). Same rule, same case
+ * handling: the scheme is case-insensitive, so "HTTPS://cdn/a.jpg" passes.
+ * Lives here, not in the vendored JSON schema, so `check:schema` stays green.
+ */
+const HTTPS_URL = /^https:\/\//i;
+const httpsUrl = (what: string) =>
+  z.string().url().refine((u) => HTTPS_URL.test(u), { message: `${what} must be an https:// URL` });
+
 export const ImageSchema = z
   .object({
-    src: z.string().url(),
+    src: httpsUrl("image src"),
     alt: z.string().optional(),
   })
   .strict();
@@ -30,7 +40,7 @@ export const VariantSchema = z
     option1: z.string().optional(), // variant value, e.g. size
     stock: z.number().int().min(0),
     price: PriceSchema,
-    image: z.string().url().optional(),
+    image: httpsUrl("variant image").optional(),
   })
   .strict();
 
