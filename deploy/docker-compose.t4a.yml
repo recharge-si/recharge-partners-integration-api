@@ -1,0 +1,37 @@
+# Production compose for /srv/recharge-si on t4a (Hetzner; time-4-action/t4a-infra, servers/t4a).
+# Save it there as docker-compose.yml, next to .env. CI sets APP_IMAGE to the image it built
+# (.github/workflows/deploy.yml, DEPLOY_DIR=/srv/recharge-si on the `production` environment);
+# without it this runs :latest. The server never builds; copy changes to this file by hand.
+#
+# Traefik (/srv/edge) routes recharge-sources.time-4-action.com here, behind Cloudflare. MongoDB is
+# t4a's shared one (/srv/mongo): MONGO_URI in .env is mongodb://recharge-si:...@mongo:27017/recharge.
+services:
+  app:
+    image: ${APP_IMAGE:-ghcr.io/recharge-si/recharge-partners-integration-api:latest}
+    env_file:
+      - .env
+    # Loopback only, for CI's health check on the server (the workflow reads the port with
+    # `docker compose port`). The public way in is Traefik; Docker-published ports skip ufw,
+    # so never 0.0.0.0.
+    ports:
+      - "127.0.0.1:4545:3000"
+    mem_limit: 768m
+    networks:
+      - edge
+      - mongo
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.recharge-sources.rule=Host(`recharge-sources.time-4-action.com`)
+      - traefik.http.services.recharge-sources.loadbalancer.server.port=3000
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    restart: unless-stopped
+
+networks:
+  edge:
+    external: true
+  mongo:
+    external: true
