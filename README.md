@@ -32,8 +32,24 @@ latest built feed per source.
 
 CI (`.github/workflows/deploy.yml`) checks every pull request. A merge to `main`
 builds `ghcr.io/recharge-si/recharge-partners-integration-api`, pushes it and
-rolls it out on the server, which runs it with `docker-compose.yml` on host port
-**4545**. `scripts/build-and-push.*` remain for a manual build.
+rolls it out on the server. `scripts/build-and-push.*` remain for a manual build.
+
+**Production runs on t4a** (Hetzner, `77.42.42.60`; time-4-action/t4a-infra, `servers/t4a`) since
+2026-11-06, moved from t2:
+
+- `/srv/recharge-si` (owned by `deploy`) holds `docker-compose.yml` (= `deploy/docker-compose.t4a.yml`:
+  Traefik routes `recharge-sources.time-4-action.com`, loopback port 4545 for CI's health check) and `.env`.
+  The root `docker-compose.yml` is for running it anywhere else.
+- MongoDB is t4a's shared one (`/srv/mongo`, database `recharge`, its own user `recharge-si`); the container
+  joins the `mongo` network.
+- The `production` environment overrides the organization's deploy secrets: `PROD_DEPLOY_HOST` (`77.42.42.60`),
+  `PROD_DEPLOY_SSH_KEY` (the key `github-actions@recharge-partners-integration-api-t4a`, public half in
+  `/home/deploy/.ssh/authorized_keys` on t4a), `PROD_DEPLOY_FINGERPRINT` (t4a's **ECDSA** host key,
+  `SHA256:2wkXWs0QETKFiXKXbxbJRASeNd9I6zigPKVQGBtwfTk`; the Ed25519 one fails with "host key fingerprint
+  mismatch") and the variable `DEPLOY_DIR=/srv/recharge-si`.
+- Only one copy may run: it pulls partner feeds on its cron and writes to MongoDB. The t2 container is
+  stopped, not removed. To go back: delete the DNS record `recharge-sources`, the four settings above, copy
+  the `recharge` database back, then `docker compose start` on t2.
 
 ## What's in the box
 
